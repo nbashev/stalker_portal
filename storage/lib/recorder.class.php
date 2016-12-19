@@ -13,20 +13,41 @@ class Recorder extends Storage
      * @throws Exception
      */
     public function start($url, $rec_id, $start_delay, $duration){
-        
+
         $this->stop($rec_id);
 
-        $filename = intval($rec_id).'_'.date("YmdHis").'.mpg';
+        $filename = intval($rec_id).'_'.date('YmdHis').'.mpg';
 
         if (!preg_match('/:\/\//', $url)){
             throw new Exception('URL wrong format');
         }
 
+        if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
+            $req = json_encode(
+                'id' => $rec_id,
+                'action' => 'recorder_start',
+                'url' => $url,
+                'path' => RECORDS_DIR.$filename,
+                'delay' => $start_delay,
+                'duration' => $duration,
+                'callback' => API_URL.'stream_recorder/'.$rec_id,
+                'limit' => intval($task['parts_number']),
+            );
+            $ch = curl_init(ASTRA_RECORDER);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            return $filename;
+        }
+
         if (strpos($url, 'rtp://') !== false ||
             strpos($url, 'udp://') !== false ||
-            (strpos($url, 'http://') !== false && defined("ASTRA_RECORDER") && ASTRA_RECORDER))
+            (strpos($url, 'http://') !== false && defined('ASTRA_RECORDER') && ASTRA_RECORDER))
         {
-            if (defined("ASTRA_RECORDER") && ASTRA_RECORDER){
+            if (defined('ASTRA_RECORDER') && ASTRA_RECORDER){
                 exec('astra '.PROJECT_PATH.'/dumpstream.lua'
                     .' -A '.$url
                     .' -s '.$start_delay
@@ -71,7 +92,7 @@ class Recorder extends Storage
         }
 
         if (!file_put_contents($this->getRecPidFile($rec_id), $pid)){
-            posix_kill($pid, defined("ASTRA_RECORDER") && ASTRA_RECORDER ? 1 : 15);
+            posix_kill($pid, defined('ASTRA_RECORDER') && ASTRA_RECORDER ? 1 : 15);
             throw new IOException('PID file is not created');
         }
 
@@ -86,7 +107,22 @@ class Recorder extends Storage
      * @throws IOException
      */
     public function stop($rec_id){
-        
+
+        if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
+            $req = json_encode(
+                'id' => $rec_id,
+                'action' => 'recorder_stop',
+            );
+            $ch = curl_init(ASTRA_RECORDER);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            return true;
+        }
+
         $pid_file = $this->getRecPidFile($rec_id);
 
         if (!is_file($pid_file)){
@@ -96,7 +132,7 @@ class Recorder extends Storage
         $pid = intval(file_get_contents($pid_file));
 
         if (posix_kill($pid, 0)){
-            $kill_result = posix_kill($pid, defined("ASTRA_RECORDER") && ASTRA_RECORDER ? 1 : 15);
+            $kill_result = posix_kill($pid, defined('ASTRA_RECORDER') && ASTRA_RECORDER ? 1 : 15);
 
             if (!$kill_result){
                 throw new IOException('Kill pid "'.$pid.'" failed on '.$this->storage_name.': '.posix_strerror(posix_get_last_error()));
@@ -143,10 +179,10 @@ class Recorder extends Storage
      * @return bool
      */
     public function delete($filename){
-        
+
         return @unlink(RECORDS_DIR.basename($filename));
     }
-    
+
     /**
      * Construct pid filename
      *

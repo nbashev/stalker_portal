@@ -20,6 +20,28 @@ class TvArchiveRecorder extends Storage
 
         $task['ch_id'] = (int) $task['ch_id'];
 
+        if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
+            $req = json_encode(
+                'id' => $task['ch_id'],
+                'action' => 'tv_archive_start',
+                'url' => $url,
+                'path' => $path,
+                'limit' => intval($task['parts_number']),
+            );
+            $ch = curl_init(ASTRA_RECORDER);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $res = curl_exec($ch);
+            curl_close($ch);
+
+            $archive = new TvArchiveTasks();
+            $archive->add($task);
+
+            return true;
+        }
+
         $pid_file = $this->getRecPidFile($task['ch_id']);
 
         if (file_exists($pid_file)){
@@ -32,12 +54,12 @@ class TvArchiveRecorder extends Storage
 
         if (strpos($url, 'rtp://') !== false ||
             strpos($url, 'udp://') !== false ||
-            (strpos($url, 'http://') !== false && defined("ASTRA_RECORDER") && ASTRA_RECORDER))
+            (strpos($url, 'http://') !== false && defined('ASTRA_RECORDER') && ASTRA_RECORDER))
         {
             $path = $this->getRecordsPath($task);
 
             if ($path && is_dir($path)){
-                if (defined("ASTRA_RECORDER") && ASTRA_RECORDER){
+                if (defined('ASTRA_RECORDER') && ASTRA_RECORDER){
                     exec('astra '.PROJECT_PATH.'/dumpstream.lua'
                         .' -A '.$url
                         .' -d '.$path
@@ -118,7 +140,26 @@ class TvArchiveRecorder extends Storage
      * @return bool
      */
     public function stop($ch_id){
-        
+
+        if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
+            $req = json_encode(
+                'id' => $task['ch_id'],
+                'action' => 'tv_archive_stop',
+            );
+            $ch = curl_init(ASTRA_RECORDER);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/json'));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            $res = curl_exec($ch);
+            curl_close($ch);
+
+            $archive = new TvArchiveTasks();
+            $archive->del($ch_id);
+
+            return true;
+        }
+
         $pid_file = $this->getRecPidFile($ch_id);
 
         if (!is_file($pid_file)){
@@ -134,7 +175,7 @@ class TvArchiveRecorder extends Storage
 
         return posix_kill($pid, 9);
     }
-    
+
     /**
      * Construct pid filename
      *
