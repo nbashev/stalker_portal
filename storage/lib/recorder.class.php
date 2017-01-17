@@ -23,7 +23,7 @@ class Recorder extends Storage
         }
 
         if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
-            $req = json_encode(
+            $req = json_encode(array(
                 'id' => $rec_id,
                 'action' => 'recorder_start',
                 'url' => $url,
@@ -31,8 +31,7 @@ class Recorder extends Storage
                 'delay' => $start_delay,
                 'duration' => $duration,
                 'callback' => API_URL.'stream_recorder/'.$rec_id,
-                'limit' => intval($task['parts_number']),
-            );
+            ));
             $ch = curl_init(ASTRA_RECORDER);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
@@ -109,10 +108,10 @@ class Recorder extends Storage
     public function stop($rec_id){
 
         if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
-            $req = json_encode(
+            $req = json_encode(array(
                 'id' => $rec_id,
                 'action' => 'recorder_stop',
-            );
+            ));
             $ch = curl_init(ASTRA_RECORDER);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $req);

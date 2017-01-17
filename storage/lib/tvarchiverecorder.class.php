@@ -21,13 +21,15 @@ class TvArchiveRecorder extends Storage
         $task['ch_id'] = (int) $task['ch_id'];
 
         if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
-            $req = json_encode(
+            $path = $this->getRecordsPath($task);
+
+            $req = json_encode(array(
                 'id' => $task['ch_id'],
                 'action' => 'tv_archive_start',
                 'url' => $url,
                 'path' => $path,
                 'limit' => intval($task['parts_number']),
-            );
+            ));
             $ch = curl_init(ASTRA_RECORDER);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
@@ -142,10 +144,10 @@ class TvArchiveRecorder extends Storage
     public function stop($ch_id){
 
         if (defined('ASTRA_RECORDER') && is_string(ASTRA_RECORDER)){
-            $req = json_encode(
-                'id' => $task['ch_id'],
+            $req = json_encode(array(
+                'id' => $ch_id,
                 'action' => 'tv_archive_stop',
-            );
+            ));
             $ch = curl_init(ASTRA_RECORDER);
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $req);
